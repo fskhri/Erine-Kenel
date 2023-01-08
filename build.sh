@@ -5,15 +5,15 @@
 
 SECONDS=0 # builtin bash timer
 ZIPNAME="QuicksilveR-surya-$(date '+%Y%m%d-%H%M').zip"
-TC_DIR="$(pwd)/tc/azure-clang"
+TC_DIR="$(pwd)/tc/clang-r450784e"
 AK3_DIR="$(pwd)/android/AnyKernel3"
 DEFCONFIG="vendor/surya-perf_defconfig"
 
 export PATH="$TC_DIR/bin:$PATH"
 
 if ! [ -d "$TC_DIR" ]; then
-	echo "Azure clang not found! Cloning to $TC_DIR..."
-	if ! git clone --depth=1 -b main https://gitlab.com/Panchajanya1999/azure-clang "$TC_DIR"; then
+	echo "AOSP clang not found! Cloning to $TC_DIR..."
+	if ! git clone --depth=1 -b 14 https://gitlab.com/ThankYouMario/android_prebuilts_clang-standalone "$TC_DIR"; then
 		echo "Cloning failed! Aborting..."
 		exit 1
 	fi
