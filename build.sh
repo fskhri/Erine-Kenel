@@ -5,8 +5,8 @@
 
 SECONDS=0 # builtin bash timer
 ZIPNAME="QuicksilveR-surya-$(date '+%Y%m%d-%H%M').zip"
-TC_DIR="$HOME/tc/azure-clang"
-AK3_DIR="$HOME/android/AnyKernel3"
+TC_DIR="$(pwd)/tc/azure-clang"
+AK3_DIR="$(pwd)/android/AnyKernel3"
 DEFCONFIG="vendor/surya-perf_defconfig"
 
 export PATH="$TC_DIR/bin:$PATH"
