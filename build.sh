@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# Compile script for QuicksilveR kernel
+# Compile script for StormBreaker kernel
 # Copyright (C) 2020-2021 Adithya R.
 
 SECONDS=0 # builtin bash timer
-ZIPNAME="QuicksilveR-surya-$(date '+%Y%m%d-%H%M').zip"
+ZIPNAME="StormBreaker-4.14-Surya-$(date '+%Y%m%d-%H%M').zip"
 TC_DIR="$(pwd)/tc/clang-r450784e"
 AK3_DIR="$(pwd)/android/AnyKernel3"
 DEFCONFIG="vendor/surya-perf_defconfig"
@@ -51,7 +51,7 @@ if [ -f "$kernel" ] && [ -f "$dtb" ] && [ -f "$dtbo" ]; then
 	echo -e "\nKernel compiled succesfully! Zipping up...\n"
 	if [ -d "$AK3_DIR" ]; then
 		cp -r $AK3_DIR AnyKernel3
-	elif ! git clone -q https://github.com/ghostrider-reborn/AnyKernel3 -b surya; then
+	elif ! git clone -q https://github.com/stormbreaker-project/AnyKernel3 -b surya; then
 		echo -e "\nAnyKernel3 repo not found locally and couldn't clone from GitHub! Aborting..."
 		exit 1
 	fi
