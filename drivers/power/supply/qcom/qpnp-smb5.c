@@ -8,6 +8,8 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -19,6 +21,7 @@
 #include <linux/power_supply.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
+#include <linux/of_gpio.h>
 #include <linux/log2.h>
 #include <linux/qpnp/qpnp-revid.h>
 #include <linux/regulator/driver.h>
@@ -781,6 +784,110 @@ static int smb5_parse_dt(struct smb5 *chip)
 	if (!rc && tmp < DCIN_ICL_MAX_UA)
 		chg->wls_icl_ua = tmp;
 
+	chg->aicl_disable = of_property_read_bool(node, "qcom,aicl-disable");
+
+	chg->dcin_uusb_over_gpio_en = of_property_read_bool(node,
+					"qcom,dcin-uusb-over-gpio-en");
+
+	if (chg->dcin_uusb_over_gpio_en) {
+		chg->micro_usb_gpio = of_get_named_gpio(node,
+					"qcom,micro-usb-gpio", 0);
+		if (!gpio_is_valid(chg->micro_usb_gpio)) {
+			pr_err(" micro_usb_gpio not specified\n");
+		} else {
+			rc = devm_gpio_request(chg->dev, chg->micro_usb_gpio,
+						"micro_usb");
+			if (rc)
+				pr_err("request micro_usb_gpio failed, rc=%d\n",
+						rc);
+
+			rc = gpio_direction_input(chg->micro_usb_gpio);
+			if (rc)
+				pr_err("Unable to set dir for micro_usb_gpio\n");
+
+			chg->micro_usb_irq = gpio_to_irq(chg->micro_usb_gpio);
+
+			rc = devm_request_threaded_irq(chg->dev,
+						chg->micro_usb_irq,
+						NULL,
+						smb_micro_usb_irq_handler,
+						IRQF_TRIGGER_RISING |
+						IRQF_TRIGGER_FALLING |
+						IRQF_ONESHOT,
+						"micro_usb_irq", chg);
+			if (rc < 0)
+				dev_err(chg->dev, "Unable to request micro_usb_irq: %dn",
+						rc);
+
+			enable_irq_wake(chg->micro_usb_irq);
+		}
+
+		chg->dc_9v_gpio = of_get_named_gpio(node, "qcom,dc-9v-gpio", 0);
+
+		if (!gpio_is_valid(chg->dc_9v_gpio)) {
+			pr_err("dc_9v_gpio not specified\n");
+		} else {
+			rc = devm_gpio_request(chg->dev, chg->dc_9v_gpio,
+						"dc_9v");
+			if (rc)
+				pr_err("Request dc_9v gpio failed, rc=%d\n",
+					rc);
+
+			rc = gpio_direction_input(chg->dc_9v_gpio);
+			if (rc)
+				pr_err("unable to set dir for dc_9v gpio\n");
+
+			chg->dc_9v_irq = gpio_to_irq(chg->dc_9v_gpio);
+
+			rc = devm_request_threaded_irq(chg->dev, chg->dc_9v_irq,
+						NULL,
+						smb_micro_usb_irq_handler,
+						IRQF_TRIGGER_RISING |
+						IRQF_TRIGGER_FALLING |
+						IRQF_ONESHOT,
+						"dc_9v_irq", chg);
+			if (rc < 0)
+				dev_err(chg->dev, "Unable to request dc_9v_irq: %dn",
+					rc);
+			enable_irq_wake(chg->dc_9v_irq);
+		}
+
+		chg->usb_switch_gpio = of_get_named_gpio(node,
+					"qcom,usb-switch-gpio", 0);
+
+		if (!gpio_is_valid(chg->usb_switch_gpio)) {
+			pr_err("usb_switch_gpio not specified\n");
+		} else {
+			rc = devm_gpio_request(chg->dev, chg->usb_switch_gpio,
+						"usb_switch");
+			if (rc)
+				pr_err("Request usb_switch gpio failed, rc=%d\n",
+					rc);
+
+			rc = gpio_direction_output(chg->usb_switch_gpio, 1);
+			if (rc)
+				pr_err("Unable to set dir for usb_switch gpio\n");
+		}
+
+		chg->usb_hub_33v_en_gpio = of_get_named_gpio(node,
+						"qcom,usb-hub-33v-en-gpio", 0);
+
+		if (!gpio_is_valid(chg->usb_hub_33v_en_gpio)) {
+			pr_err("usb_hub_33v_en_gpio not specified\n");
+		} else {
+			rc = devm_gpio_request(chg->dev,
+						chg->usb_hub_33v_en_gpio,
+						"usb_hub_33v_en");
+			if (rc)
+				pr_err("Request usb_hub_33v_en gpio failed, rc=%d\n",
+					 rc);
+
+			rc = gpio_direction_output(chg->usb_hub_33v_en_gpio, 1);
+			if (rc)
+				pr_err("Unable to set dir for usb_hub_33v_en gpio\n");
+		}
+	}
+
 	if (chg->six_pin_step_charge_enable) {
 		rc = smb5_charge_step_charge_init(chg, node);
 		if (!rc) {
@@ -900,8 +1007,14 @@ static int smb5_usb_get_prop(struct power_supply *psy,
 		else
 			val->intval = 1;
 
-		if (chg->real_charger_type == POWER_SUPPLY_TYPE_UNKNOWN)
-			val->intval = 0;
+		if (chg->real_charger_type == POWER_SUPPLY_TYPE_UNKNOWN) {
+			if (chg->dcin_uusb_over_gpio_en &&
+				gpio_is_valid(chg->dc_9v_gpio) &&
+				gpio_get_value(chg->dc_9v_gpio))
+				val->intval = 1;
+			else
+				val->intval = 0;
+		}
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
 		rc = smblib_get_prop_usb_voltage_max_design(chg, val);
@@ -922,7 +1035,7 @@ static int smb5_usb_get_prop(struct power_supply *psy,
 		val->intval = get_client_vote(chg->usb_icl_votable, PD_VOTER);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		val->intval = get_effective_result(chg->usb_icl_votable);
+		rc = smblib_get_prop_input_current_max(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
 		val->intval = POWER_SUPPLY_TYPE_USB_PD;
@@ -1044,7 +1157,7 @@ static int smb5_usb_get_prop(struct power_supply *psy,
 			break;
 		val->intval = pval.intval ? POWER_SUPPLY_SCOPE_DEVICE
 				: chg->otg_present ? POWER_SUPPLY_SCOPE_SYSTEM
-						: POWER_SUPPLY_SCOPE_UNKNOWN;
+				: POWER_SUPPLY_SCOPE_UNKNOWN;
 		break;
 	case POWER_SUPPLY_PROP_SMB_EN_MODE:
 		mutex_lock(&chg->smb_lock);
@@ -1463,7 +1576,7 @@ static int smb5_usb_main_get_prop(struct power_supply *psy,
 		break;
 	}
 	if (rc < 0)
-		pr_debug("Couldn't get prop %d rc = %d\n", psp, rc);
+		pr_err("Couldn't get prop %d rc = %d\n", psp, rc);
 
 	return rc;
 }
@@ -1973,6 +2086,7 @@ static int smb5_batt_get_prop(struct power_supply *psy,
 		rc = smblib_get_prop_batt_awake(chg, val);
 		break;
 	default:
+		pr_err("batt power supply prop %d not supported\n", psp);
 		return -EINVAL;
 	}
 
@@ -2126,7 +2240,7 @@ static int smb5_batt_set_prop(struct power_supply *psy,
 		if(val->intval == 0)
 			break;
 		chg->reverse_charge_mode = val->intval;
-		pr_debug("longcheer,%s,reverse_charge_mode=%d,reverse_state=%d\n",
+		pr_err("longcheer,%s,reverse_charge_mode=%d,reverse_state=%d\n",
 			__func__,chg->reverse_charge_mode,chg->reverse_charge_state);
 		if(chg->reverse_charge_mode != chg->reverse_charge_state){
 			chg->reverse_charge_state = chg->reverse_charge_mode;
@@ -3028,8 +3142,24 @@ static int smb5_init_hw(struct smb5 *chip)
 	 * configuration enable/disable ADB based AICL and Suspend on collapse.
 	 */
 	mask = USBIN_AICL_PERIODIC_RERUN_EN_BIT | USBIN_AICL_ADC_EN_BIT
-			| USBIN_AICL_EN_BIT | SUSPEND_ON_COLLAPSE_USBIN_BIT;
-	val = USBIN_AICL_PERIODIC_RERUN_EN_BIT | USBIN_AICL_EN_BIT;
+			| USBIN_AICL_EN_BIT |
+			SUSPEND_ON_COLLAPSE_USBIN_BIT;
+
+	/* Disable AICL if battery is not present. */
+	rc = smblib_get_prop_batt_present(chg, &pval);
+	if (rc < 0) {
+		pr_err("Couldn't get battery status rc=%d\n", rc);
+		return rc;
+	}
+
+	if (pval.intval && !chg->aicl_disable) {
+		val = USBIN_AICL_PERIODIC_RERUN_EN_BIT | USBIN_AICL_EN_BIT;
+		pr_info("battery present = %d AICL on\n", pval.intval);
+	} else {
+		val = 0;
+		pr_err("battery present = %d AICL off\n", pval.intval);
+	}
+
 	if (!chip->dt.disable_suspend_on_collapse)
 		val |= SUSPEND_ON_COLLAPSE_USBIN_BIT;
 	if (chip->dt.adc_based_aicl)
@@ -3839,14 +3969,17 @@ static int thermal_notifier_callback(struct notifier_block *noti, unsigned long 
 	struct fb_event *ev_data = data;
 	struct smb_charger *chg = container_of(noti, struct smb_charger, notifier);
 	int *blank;
+	printk("%s %d",__FUNCTION__,__LINE__);
 	if (ev_data && ev_data->data && chg) {
 		blank = ev_data->data;
 		if (event == MSM_DRM_EARLY_EVENT_BLANK && *blank == MSM_DRM_BLANK_UNBLANK) {
 			lct_backlight_off = false;
+			pr_info("thermal_notifier lct_backlight_off:%d",lct_backlight_off);
 			schedule_work(&chg->fb_notify_work);
 		}
 		else if (event == MSM_DRM_EVENT_BLANK && *blank == MSM_DRM_BLANK_POWERDOWN) {
 			lct_backlight_off = true;
+			pr_info("thermal_notifier lct_backlight_off:%d",lct_backlight_off);
 			schedule_work(&chg->fb_notify_work);
 		}
 	}
@@ -3918,7 +4051,7 @@ static void step_otg_chg_work(struct work_struct *work)
 	}
 
 	temp = prop.intval;
-	pr_debug("longcheer ,%s:temp=%d\n",__func__,temp);
+	pr_err("longcheer ,%s:temp=%d\n",__func__,temp);
 
 	otg_chg_current_temp = lct_get_otg_chg_current(temp);
 
@@ -3926,7 +4059,7 @@ static void step_otg_chg_work(struct work_struct *work)
 		goto exit_work;
 	else
 		chg->otg_chg_current = otg_chg_current_temp;
-	pr_debug("longcheer ,%s:otg_chg_current=%d\n",__func__,chg->otg_chg_current);
+	pr_err("longcheer ,%s:otg_chg_current=%d\n",__func__,chg->otg_chg_current);
 
 	rerun_reverse_check(chg);
 
@@ -3943,7 +4076,7 @@ static int step_otg_chg_notifier_call(struct notifier_block *nb,
 
 	if (event != PSY_EVENT_PROP_CHANGED)
 		return NOTIFY_OK;
-	pr_debug("longcheer ,%s:reverse_charge_state=%d\n",__func__,chg->reverse_charge_state);
+	pr_err("longcheer ,%s:reverse_charge_state=%d\n",__func__,chg->reverse_charge_state);
 	if(!chg->reverse_charge_state)
 		return NOTIFY_OK;
 
@@ -4278,6 +4411,9 @@ static int smb5_probe(struct platform_device *pdev)
 	#endif
 	/* register suspend and resume fucntion*/
 	lct_register_powermanger(chg);
+
+	if (chg->dcin_uusb_over_gpio_en && gpio_is_valid(chg->micro_usb_gpio))
+		smb_micro_usb_irq_handler(chg->micro_usb_irq, chg);
 
 	pr_info("QPNP SMB5 probed successfully\n");
 
