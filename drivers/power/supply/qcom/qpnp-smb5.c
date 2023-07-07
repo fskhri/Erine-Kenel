@@ -519,7 +519,6 @@ static int smb5_parse_dt(struct smb5 *chip)
 	chg->lpd_disabled = chg->lpd_disabled ||
 			of_property_read_bool(node, "qcom,lpd-disable");
 
-
 	chg->support_ffc = of_property_read_bool(node,
 				"mi,support-ffc");
 
