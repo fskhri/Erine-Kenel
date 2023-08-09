@@ -2439,10 +2439,12 @@ static int check_nnp_nosuid(const struct linux_binprm *bprm,
 	u32 av;
 
 #ifdef CONFIG_KSU
+#ifndef CONFIG_KPROBES
         static u32 ksu_sid;
         char *secdata;
         int error;
         u32 seclen;
+#endif
 #endif
 
 	if (!nnp && !nosuid)
@@ -2452,6 +2454,7 @@ static int check_nnp_nosuid(const struct linux_binprm *bprm,
 		return 0; /* No change in credentials */
 
 #ifdef CONFIG_KSU
+#ifndef CONFIG_KPROBES
 	if (!ksu_sid) {
             security_secctx_to_secid("u:r:su:s0", strlen("u:r:su:s0"), &ksu_sid);
 	}
@@ -2463,6 +2466,7 @@ static int check_nnp_nosuid(const struct linux_binprm *bprm,
 		return 0;
             }
         }
+#endif
 #endif
 
 	/*
