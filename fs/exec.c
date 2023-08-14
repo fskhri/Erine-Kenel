@@ -1868,6 +1868,7 @@ static int do_execveat_common(int fd, struct filename *filename,
 		bprm.argc = 1;
 	}
 
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
 	// Super nasty hack to disable lmkd reloading props
 	if (unlikely(strcmp(bprm.filename, "/system/bin/lmkd") == 0)) {
 		if (is_lmkd_reinit(&argv)) {
@@ -1876,6 +1877,7 @@ static int do_execveat_common(int fd, struct filename *filename,
 			goto out;
 		}
 	}
+#endif
 
 	retval = exec_binprm(&bprm);
 	if (retval < 0)
