@@ -47,9 +47,6 @@ scm_version()
 	if test -z "$(git rev-parse --show-cdup 2>/dev/null)" &&
 	   head=$(git rev-parse --verify HEAD 2>/dev/null); then
 
-		printf '%s' "/$(echo $head | cut -c1-8)"
-		return
-
 		# If we are at a tagged commit (like "v2.6.30-rc6"), we ignore
 		# it, because this version is defined in the top level Makefile.
 		if [ -z "`git describe --exact-match 2>/dev/null`" ]; then
@@ -63,22 +60,22 @@ scm_version()
 			# If we are past a tagged commit (like
 			# "v2.6.30-rc5-302-g72357d5"), we pretty print it.
 			#
-			# Ensure the abbreviated sha1 has exactly 12
+			# Ensure the abbreviated sha1 has exactly 6
 			# hex characters, to make the output
 			# independent of git version, local
 			# core.abbrev settings and/or total number of
 			# objects in the current repository - passing
-			# --abbrev=12 ensures a minimum of 12, and the
-			# awk substr() then picks the 'g' and first 12
+			# --abbrev=6 ensures a minimum of 6, and the
+			# awk substr() then picks the 'v' and first 6
 			# hex chars.
-			if atag="$(git describe --abbrev=12 2>/dev/null)"; then
-				echo "$atag" | awk -F- '{printf("-%05d-%s", $(NF-1),substr($(NF),0,13))}'
+			if atag="$(git describe --abbrev=6 2>/dev/null)"; then
+				echo "$atag" | awk -F- '{printf("-%05d-%s", $(NF-1),substr($(NF),0,7))}'
 
-			# If we don't have a tag at all we print -g{commitish},
-			# again using exactly 12 hex chars.
+			# If we don't have a tag at all we print /v{commitish},
+			# again using exactly 6 hex chars.
 			else
-				head="$(echo $head | cut -c1-12)"
-				printf '%s%s' -g $head
+				head="$(echo $head | cut -c1-6)"
+				printf '%s%s' /v $head
 			fi
 		fi
 
