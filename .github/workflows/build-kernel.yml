@@ -41,7 +41,7 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          document: perf*.zip
+          document: kernel*.zip
           message: |
              Build date: ${{ env.BUILD_DATE }}
              Latest commit: ${{ env.COMMIT_POINT }}

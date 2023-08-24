@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# Compile script for perf kernel
+# Compile script for AOSP kernels
 # Copyright (C) 2020-2023 Adithya R.
 
 SECONDS=0 # builtin bash timer
-ZIPNAME="perf-surya-$(date '+%Y%m%d-%H%M').zip"
+ZIPNAME="kernel-surya-$(date '+%Y%m%d-%H%M').zip"
 TC_DIR="$(pwd)/tc/clang-neutron"
 AK3_DIR="$(pwd)/AnyKernel3"
 DEFCONFIG="vendor/surya-perf_defconfig"
