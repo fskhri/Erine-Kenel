@@ -35,6 +35,12 @@ jobs:
           echo "COMMIT_POINT=${COMMIT_POINT}" >> $GITHUB_ENV
           echo "HEAD_COMMIT=${HEAD_COMMIT}" >> $GITHUB_ENV
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: my-artifact
+          path: ${{ env.ZIPNAME }}
+
       - name: Upload to Telegram
         uses: appleboy/telegram-action@master
         with:
