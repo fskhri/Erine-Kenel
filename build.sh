@@ -82,3 +82,5 @@ cd ..
 rm -rf AnyKernel3
 echo -e "\nCompleted in $((SECONDS / 60)) minute(s) and $((SECONDS % 60)) second(s) !"
 echo "$(realpath $ZIPNAME)"
+[ "$1" == "-u" ] && DL_URL=$(curl --upload-file "$ZIPNAME" https://free.keep.sh)
+echo "$DL_URL"

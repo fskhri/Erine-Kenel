@@ -21,8 +21,9 @@ jobs:
 
       - name: Run build script
         run: |
-          source build.sh
+          source build.sh -u
           echo "ZIPNAME=${ZIPNAME}" >> $GITHUB_ENV
+          echo "DL_URL=${DL_URL}" >> $GITHUB_ENV
 
       - name: Setup build date
         run: echo "BUILD_DATE=$(date '+%H:%M %d/%m/%Y')" >> $GITHUB_ENV
@@ -50,3 +51,4 @@ jobs:
           message: |
              Build date: ${{ env.BUILD_DATE }}
              Latest commit: ${{ env.COMMIT_POINT }} [${{ env.HEAD_COMMIT }}]
+             Download: ${{ env.DL_URL }}
