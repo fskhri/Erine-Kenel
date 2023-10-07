@@ -9,21 +9,20 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@main
 
       - name: Setup timezone
-        uses: szenius/set-timezone@v1.2
+        uses: szenius/set-timezone@master
         with:
           timezoneLinux: "America/Sao_Paulo"
 
       - name: Setup the environment
-        run: |
-          sudo apt-get update -y
-          sudo apt-get upgrade -y
-          sudo apt-get install elfutils libarchive-tools -y
+        run: sudo apt-get install elfutils libarchive-tools -y
 
       - name: Run build script
-        run: ./build.sh
+        run: |
+          source build.sh
+          echo "ZIPNAME=${ZIPNAME}" >> $GITHUB_ENV
 
       - name: Setup build date
         run: echo "BUILD_DATE=$(date '+%H:%M %d/%m/%Y')" >> $GITHUB_ENV
@@ -31,8 +30,8 @@ jobs:
       - name: Git variables
         run: |
           HEAD="$(git rev-parse HEAD)"
-          COMMIT_POINT="$(git log --pretty=format:'%h: %s' -1)"
           HEAD_COMMIT="https://github.com/rd-stuffs/msm-4.14/commit/$HEAD"
+          COMMIT_POINT="$(git log --pretty=format:'%h: %s' -1)"
           echo "COMMIT_POINT=${COMMIT_POINT}" >> $GITHUB_ENV
           echo "HEAD_COMMIT=${HEAD_COMMIT}" >> $GITHUB_ENV
 
@@ -41,9 +40,7 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          document: kernel*.zip
+          document: ${{ env.ZIPNAME }}
           message: |
              Build date: ${{ env.BUILD_DATE }}
-             Latest commit: ${{ env.COMMIT_POINT }}
-             
-             ${{ env.HEAD_COMMIT }}
+             Latest commit: ${{ env.COMMIT_POINT }} [${{ env.HEAD_COMMIT }}]

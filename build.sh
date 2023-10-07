@@ -19,7 +19,7 @@ MAKE_PARAMS="O=out ARCH=arm64 CC=clang LD=ld.lld LLVM=1 LLVM_IAS=1 \
    CROSS_COMPILE=aarch64-linux-gnu- \
    CROSS_COMPILE_COMPAT=arm-linux-gnueabi-"
 
-export PATH="$TC_DIR/bin:$PATH"
+PATH="$TC_DIR/bin:$PATH"
 
 if ! [ -d "$TC_DIR" ]; then
    echo "Neutron Clang not found! Downloading to $TC_DIR..."
