@@ -18,9 +18,8 @@ jobs:
 
       - name: Run build script
         run: |
-          source build.sh -u
+          bash build.sh
           echo "ZIPNAME=${ZIPNAME}" >> $GITHUB_ENV
-          echo "DL_URL=${DL_URL}" >> $GITHUB_ENV
 
       - name: Setup build date
         run: echo "BUILD_DATE=$(date '+%H:%M %d/%m/%Y')" >> $GITHUB_ENV
@@ -29,8 +28,6 @@ jobs:
         run: |
           HEAD="$(git rev-parse HEAD)"
           HEAD_COMMIT="https://github.com/rd-stuffs/msm-4.14/commit/$HEAD"
-          COMMIT_POINT="$(git log --pretty=format:'%h: %s' -1)"
-          echo "COMMIT_POINT=${COMMIT_POINT}" >> $GITHUB_ENV
           echo "HEAD_COMMIT=${HEAD_COMMIT}" >> $GITHUB_ENV
 
       - name: Upload build artifact
@@ -46,6 +43,6 @@ jobs:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           document: ${{ env.ZIPNAME }}
           message: |
-             Build date: ${{ env.BUILD_DATE }}
-             Latest commit: ${{ env.COMMIT_POINT }} [${{ env.HEAD_COMMIT }}]
-             Download: ${{ env.DL_URL }}
+             ${{ env.BUILD_DATE }}
+             
+             ${{ env.HEAD_COMMIT }}
