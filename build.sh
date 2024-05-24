@@ -4,7 +4,7 @@
 # Copyright (C) 2020-2023 Adithya R.
 
 SECONDS=0 # builtin bash timer
-ZIPNAME="kernel-surya-$(date '+%Y%m%d-%H%M').zip"
+ZIPNAME="Erine-Surya-$(date '+%Y%m%d-%H%M').zip"
 TC_DIR="$(pwd)/tc/clang-r498229"
 AK3_DIR="$(pwd)/AnyKernel3"
 DEFCONFIG="vendor/surya-perf_defconfig"
@@ -67,7 +67,7 @@ echo -e "\nKernel compiled succesfully! Zipping up...\n"
 if [ -d "$AK3_DIR" ]; then
    cp -r $AK3_DIR AnyKernel3
    git -C AnyKernel3 checkout master &> /dev/null
-elif ! git clone -q https://github.com/rd-stuffs/AnyKernel3 -b master; then
+elif ! git clone -q https://github.com/fskhri/AnyKernel3 -b surya; then
      echo -e "\nAnyKernel3 repo not found locally and couldn't clone from GitHub! Aborting..."
      exit 1
 fi
